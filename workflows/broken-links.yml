@@ -5,6 +5,7 @@ on:
     branches: [ "main" ]
   pull_request:
     branches: [ "main" ]
+  workflow_dispatch:
 
 jobs:
   check-links:
@@ -29,8 +30,8 @@ jobs:
         with:
           name: link-report
           path: linkinator-report.md
-    
-     - name: Criar Issue se houver links quebrados
+
+      - name: Criar Issue se houver links quebrados
         if: failure()
         uses: peter-evans/create-issue-from-file@v5
         with:
