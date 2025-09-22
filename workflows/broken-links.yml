@@ -1,0 +1,39 @@
+name: Checar Links Quebrados
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  check-links:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Instalar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Instalar Linkinator
+        run: npm install -g linkinator
+
+      - name: Rodar Linkinator no site publicado
+        run: |
+          linkinator https://aliceczr.github.io/broken-links-test/ \
+            --verbosity error \
+            --markdown > linkinator-report.md
+
+      - name: Publicar relatório como artefato
+        uses: actions/upload-artifact@v4
+        with:
+          name: link-report
+          path: linkinator-report.md
+    
+     - name: Criar Issue se houver links quebrados
+        if: failure()
+        uses: peter-evans/create-issue-from-file@v5
+        with:
+          title: "⚠️ Links quebrados detectados"
+          content-filepath: ./linkinator-report.md
+          labels: broken-links
