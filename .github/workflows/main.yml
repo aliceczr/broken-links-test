@@ -21,7 +21,7 @@ jobs:
 
       - name: Rodar Linkinator no site publicado
         run: |
-          linkinator https://aliceczr.github.io/broken-links-test/ \
+          linkinator https://aliceczr.github.io/broken-links-test/docs/ \
             --verbosity error \
             --markdown > linkinator-report.md
 
