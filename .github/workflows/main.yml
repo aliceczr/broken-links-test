@@ -1,4 +1,4 @@
-name: Link Check (No Token, Strict)
+name: Link Check
 
 on:
   push:
@@ -6,41 +6,53 @@ on:
 
 jobs:
   link-check:
+    name: 🔍 Verificação de links com Lychee
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout repo
+      - name: 🧩 Checkout do código
         uses: actions/checkout@v4
 
-      - name: Setup Rust and install Lychee
+      - name: 🦀 Instalar Rust e Lychee
         run: |
-          echo "🦀 Instalando Rust e Lychee..."
           sudo apt-get update && sudo apt-get install -y curl
           cargo install lychee
 
-      - name: Run Lychee and generate report
+      - name: 🏗️ Criar pasta de relatórios
+        run: mkdir -p reports
+
+      - name: 🔍 Executar verificação de links
         run: |
           echo "🔍 Executando verificação de links com Lychee..."
-          mkdir -p reports
-          lychee --output reports/relatorio-links-quebrados.md ./public || true
-          echo "📄 Conteúdo do relatório:"
-          cat reports/relatorio-links-quebrados.md || true
+          lychee --output reports/relatorio-links-quebrados.md ./public
 
-      - name: Check for broken links (simulate issue creation, then fail)
+      - name: 📄 Mostrar saída do Lychee
+        run: |
+          echo "📄 Saída do Lychee:"
+          cat reports/relatorio-links-quebrados.md
+
+      - name: 📦 Verificar se há links quebrados
         run: |
           echo "📦 Verificando se há links quebrados..."
           if grep -q '✗' reports/relatorio-links-quebrados.md; then
             echo "⚠️ Links quebrados encontrados."
+            echo "📝 Criando issue no GitHub..."
+            body=$(sed 's/\"/\\"/g' reports/relatorio-links-quebrados.md | awk '{printf "%s\\n", $0}')
+            curl -s -X POST \
+              -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+              -H "Accept: application/vnd.github.v3+json" \
+              https://api.github.com/repos/${{ github.repository }}/issues \
+              -d "{\"title\": \"Links quebrados detectados no site\", \"body\": \"$body\", \"labels\": [\"automated\", \"broken-links\"]}"
 
-            # Monta um payload JSON simulando a issue que criaríamos
-            TITLE="Links quebrados detectados no site"
-            DESCRIPTION="$(sed 's/\"/\\"/g' reports/relatorio-links-quebrados.md | awk '{printf "%s\\n", $0}')"
-            PAYLOAD=$(printf '{"title":"%s","description":"%s","labels":"automated,broken-links"}' "$TITLE" "$DESCRIPTION")
-
-            echo "🧾 Simulação de payload para criação de issue (nenhuma chamada externa será feita):"
-            echo "$PAYLOAD"
-
-            echo "❌ Falha intencional: links quebrados detectados. Encerrando job."
+            echo "❌ Falhando o job por causa dos links quebrados."
             exit 1
           else
             echo "✅ Nenhum link quebrado encontrado."
           fi
+
+      - name: 📦 Salvar relatório como artefato
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: relatorio-links-quebrados
+          path: reports/relatorio-links-quebrados.md
